@@ -9,9 +9,12 @@ int monsterCols = 10;
 int monsterRows = 5; 
 
 long mmCounter = 0;
-int mmStep = 1; 
+int mmStep = 1;
 
-Sprite ship, missile, fallingMonster, explosion, gameOverSprite;
+static final String MISSILE_IMAGE = "rocket.png";
+
+Sprite ship, fallingMonster, explosion, gameOverSprite;
+ArrayList<Sprite> missiles;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
 
 KeyboardController kbController;
@@ -31,6 +34,8 @@ void setup()
   S4P.messagesEnabled(true);
   buildSprites();
   resetMonsters();
+
+  missiles = new ArrayList<Sprite>();
 
   explosion = new Sprite(this, "explosion_strip16.png", 17, 1, 90);
   explosion.setScale(1);
@@ -52,9 +57,6 @@ void buildSprites()
 
   // The Grid Monsters 
   buildMonsterGrid();
-
-  // The Misile
-  missile = buildMissile();
 }
 
 Sprite buildShip()
@@ -112,7 +114,7 @@ Sprite buildMonster()
 Sprite buildMissile()
 {
   // The Missile
-  Sprite sprite  = new Sprite(this, "rocket.png", 10);
+  Sprite sprite  = new Sprite(this, MISSILE_IMAGE, 10);
   sprite.setScale(.5);
   sprite.setDead(true); // Initially hide the missile
   return sprite;
@@ -123,17 +125,21 @@ double upRadians = 4.71238898;
 
 void fireMissile() 
 {
-  if (missile.isDead() && !ship.isDead()) {
+  if (!ship.isDead()) {
+    Sprite missile = buildMissile();
     missile.setPos(ship.getPos());
     missile.setSpeed(missileSpeed, upRadians);
     missile.setDead(false);
+    missiles.add(missile);
   }
 }
 
-void stopMissile() 
+void stopMissile(int index) 
 {
-  missile.setSpeed(0, upRadians);
-  missile.setDead(true);
+  missiles.get(index).setSpeed(0, upRadians);
+  missiles.get(index).setDead(true);
+  S4P.deregisterSprite(missiles.get(index));
+  missiles.remove(index);
 }
 
 // Pick the first monster on the grid that is not dead.
@@ -184,9 +190,12 @@ public void pre()
   moveMonsters();
 
   // If missile flies off screen
-  if (!missile.isDead() && ! missile.isOnScreem()) {
-    stopMissile();
+  for (int i=missiles.size()-1; i>=0; i--) {
+    if (!missiles.get(i).isOnScreem()) {
+      stopMissile(i);
+    }
   }
+
 
   if (pickNonDeadMonster() == null) {
     resetMonsters();
@@ -202,6 +211,8 @@ public void pre()
   S4P.updateSprites(stopWatch.getElapsedTime());
 } 
 
+boolean spaceWasPressed = false;
+
 void checkKeys() 
 {
   if (focused) {
@@ -211,8 +222,11 @@ void checkKeys()
     if (kbController.isRight()) {
       ship.setX(ship.getX()+10);
     }
-    if (kbController.isSpace()) {
+    if (kbController.isSpace() && !spaceWasPressed){
+      spaceWasPressed = true;
       fireMissile();
+    } else if (!kbController.isSpace()){
+      spaceWasPressed = false;
     }
   }
 }
@@ -259,24 +273,31 @@ void processCollisions()
   // Detect collisions between Grid Monsters and Missile
   for (int idx = 0; idx < monsters.length; idx++) {
     Sprite monster = monsters[idx];
-    if (!missile.isDead() && !monster.isDead() 
-      && monster != fallingMonster 
-      && missile.bb_collision(monster)) {
-      score += gridMonsterPts;
-      monsterHit(monster);
-      missile.setDead(true);
+    for (int j = missiles.size()-1; j>=0; j--) {
+
+      Sprite missile = missiles.get(j);
+      if (!missile.isDead() && !monster.isDead() 
+        && monster != fallingMonster 
+        && missile.bb_collision(monster)) {
+        score += gridMonsterPts;
+        monsterHit(monster);
+        stopMissile(j);
+      }
     }
   }
 
-  // Between Falling Monster and Missile
-  if (!missile.isDead() && fallingMonster != null 
-    && missile.cc_collision(fallingMonster)) {
-    score += fallingMonsterPts;
-    monsterHit(fallingMonster); 
-    missile.setDead(true);
-    fallingMonster = null;
-  }
-
+  if (fallingMonster != null)
+    for (int j = missiles.size()-1; j>=0; j--) {
+      Sprite missile = missiles.get(j);
+      // Between Falling Monster and Missile
+      if (missile.cc_collision(fallingMonster)) {
+        score += fallingMonsterPts;
+        monsterHit(fallingMonster); 
+        stopMissile(j);
+        fallingMonster = null;
+        break;
+      }
+    }
 
   // Between Falling Monster and Ship
   if (fallingMonster!= null && !ship.isDead() 
