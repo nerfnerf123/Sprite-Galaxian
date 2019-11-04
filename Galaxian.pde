@@ -288,10 +288,28 @@ void processCollisions()
   }
 }
 
-void monsterHit(Sprite monster) 
+Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
+{
+  Sprite cranberry = new Sprite(this, "ship.png", 30);
+  cranberry.setScale(.5);
+  cranberry.setXY(monster.getX(), monster.getY());
+  
+  if (!cranberry.isDead() && !ship.isDead()) {
+    cranberry.setPos(monster.getPos());
+    cranberry.setSpeed(missileSpeed/10, -upRadians);
+    cranberry.setDead(false);
+  }
+  
+  
+  return cranberry;
+}
+
+void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
 {
   soundPlayer.playPop();
   monster.setDead(true);
+  buildCranberry(monster);
+
 }
 
 void drawScore() {
