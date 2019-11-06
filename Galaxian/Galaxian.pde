@@ -11,10 +11,18 @@ int monsterRows = 5;
 long mmCounter = 0;
 int mmStep = 1;
 
-static final String MISSILE_IMAGE = "rocket.png";
+static final String MISSILE_IMAGE = "cranberry.png";
+static final float MISSILE_SCALE = 0.05f;
+static final String MONSTER_IMAGE = "sprite.png";
+static final float MONSTER_SCALE = 0.3f;
+static final String SPRITE_CRANBERRY_IMAGE = "spriteCranberry.png";
+static final float SPRITE_CRANBERRY_SCALE = 0.3f;
+static final String LEBRON_JAMES_IMAGE = "lebron.png";
+static final float LEBRON_JAMES_SCALE = 0.15f;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
+ArrayList<Sprite> spriteCranberries;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
 
 KeyboardController kbController;
@@ -36,6 +44,7 @@ void setup()
   resetMonsters();
 
   missiles = new ArrayList<Sprite>();
+  spriteCranberries = new ArrayList<Sprite>();
 
   explosion = new Sprite(this, "explosion_strip16.png", 17, 1, 90);
   explosion.setScale(1);
@@ -61,11 +70,10 @@ void buildSprites()
 
 Sprite buildShip()
 {
-  Sprite ship = new Sprite(this, "ship.png", 50);
+  Sprite ship = new Sprite(this, LEBRON_JAMES_IMAGE, 50);
   ship.setXY(width/2, height - 30);
   ship.setVelXY(0.0f, 0);
-  ship.setScale(.75);
-  ship.setRot(3.14159);
+  ship.setScale(LEBRON_JAMES_SCALE);
   // Domain keeps the moving sprite withing specific screen area 
   ship.setDomain(0, height-ship.getHeight(), width, height, Sprite.HALT);
 
@@ -104,8 +112,8 @@ void resetMonsters()
 // Build individual monster
 Sprite buildMonster() 
 {
-  Sprite monster = new Sprite(this, "monster.png", 30);
-  monster.setScale(.5);
+  Sprite monster = new Sprite(this, MONSTER_IMAGE, 30);
+  monster.setScale(MONSTER_SCALE);
   monster.setDead(false);
 
   return monster;
@@ -115,7 +123,7 @@ Sprite buildMissile()
 {
   // The Missile
   Sprite sprite  = new Sprite(this, MISSILE_IMAGE, 10);
-  sprite.setScale(.5);
+  sprite.setScale(MISSILE_SCALE);
   sprite.setDead(true); // Initially hide the missile
   return sprite;
 }
@@ -127,7 +135,8 @@ void fireMissile()
 {
   if (!ship.isDead()) {
     Sprite missile = buildMissile();
-    missile.setPos(ship.getPos());
+    Vector2D shipPos = ship.getPos();
+    missile.setPos(new Vector2D(shipPos.x + ship.getWidth()*0.32f, shipPos.y - ship.getHeight()*.5f));
     missile.setSpeed(missileSpeed, upRadians);
     missile.setDead(false);
     missiles.add(missile);
@@ -193,6 +202,13 @@ public void pre()
   for (int i=missiles.size()-1; i>=0; i--) {
     if (!missiles.get(i).isOnScreem()) {
       stopMissile(i);
+    }
+  }
+  
+  for (int i=spriteCranberries.size()-1; i>=0; i--) {
+    if (!spriteCranberries.get(i).isOnScreem()) {
+      S4P.deregisterSprite(spriteCranberries.get(i));
+      spriteCranberries.remove(i);
     }
   }
 
@@ -311,8 +327,8 @@ void processCollisions()
 
 Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
 {
-  Sprite cranberry = new Sprite(this, "ship.png", 30);
-  cranberry.setScale(.5);
+  Sprite cranberry = new Sprite(this, SPRITE_CRANBERRY_IMAGE, 30);
+  cranberry.setScale(SPRITE_CRANBERRY_SCALE);
   cranberry.setXY(monster.getX(), monster.getY());
   
   if (!cranberry.isDead() && !ship.isDead()) {
@@ -321,6 +337,7 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
     cranberry.setDead(false);
   }
   
+  spriteCranberries.add(cranberry);
   
   return cranberry;
 }
