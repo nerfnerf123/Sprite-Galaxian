@@ -51,6 +51,8 @@ void setup()
 
   gameOverSprite = new Sprite(this, "gameOver.png", 100);
   gameOverSprite.setDead(true);
+  
+  soundPlayer.playSong();
 }
 
 boolean gameOver = false;
@@ -322,6 +324,7 @@ void processCollisions()
     monsterHit(fallingMonster);
     fallingMonster = null;
     gameOver = true;
+    soundPlayer.stopSong();
   }
 }
 
@@ -332,8 +335,8 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
   cranberry.setXY(monster.getX(), monster.getY());
   
   if (!cranberry.isDead() && !ship.isDead()) {
-    cranberry.setPos(monster.getPos());
-    cranberry.setSpeed(missileSpeed/10, -upRadians);
+    cranberry.setPos(monster.getPos()) ;      
+        cranberry.setSpeed(missileSpeed/10, -upRadians);
     cranberry.setDead(false);
   }
   
