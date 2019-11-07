@@ -4,6 +4,8 @@ import sprites.utils.*;
 import sprites.maths.*;
 import sprites.*;
 
+import java.util.ArrayDeque;
+
 // The dimensions of the monster grid.
 int monsterCols = 10;
 int monsterRows = 5; 
@@ -18,7 +20,7 @@ static final float MONSTER_SCALE = 0.3f;
 static final String SPRITE_CRANBERRY_IMAGE = "spriteCranberry.png";
 static final float SPRITE_CRANBERRY_SCALE = 0.3f;
 static final String LEBRON_JAMES_IMAGE = "lebron.png";
-static final float LEBRON_JAMES_SCALE = 0.15f;
+static final float LEBRON_JAMES_SCALE = 0.18f;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
@@ -51,8 +53,10 @@ void setup()
 
   gameOverSprite = new Sprite(this, "gameOver.png", 100);
   gameOverSprite.setDead(true);
-  
+
   soundPlayer.playSong();
+
+  initSnowflakes();
 }
 
 boolean gameOver = false;
@@ -206,7 +210,7 @@ public void pre()
       stopMissile(i);
     }
   }
-  
+
   for (int i=spriteCranberries.size()-1; i>=0; i--) {
     if (!spriteCranberries.get(i).isOnScreem()) {
       S4P.deregisterSprite(spriteCranberries.get(i));
@@ -240,10 +244,10 @@ void checkKeys()
     if (kbController.isRight()) {
       ship.setX(ship.getX()+10);
     }
-    if (kbController.isSpace() && !spaceWasPressed){
+    if (kbController.isSpace() && !spaceWasPressed) {
       spaceWasPressed = true;
       fireMissile();
-    } else if (!kbController.isSpace()){
+    } else if (!kbController.isSpace()) {
       spaceWasPressed = false;
     }
   }
@@ -333,15 +337,15 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
   Sprite cranberry = new Sprite(this, SPRITE_CRANBERRY_IMAGE, 30);
   cranberry.setScale(SPRITE_CRANBERRY_SCALE);
   cranberry.setXY(monster.getX(), monster.getY());
-  
+
   if (!cranberry.isDead() && !ship.isDead()) {
     cranberry.setPos(monster.getPos()) ;      
-        cranberry.setSpeed(missileSpeed/10, -upRadians);
+    cranberry.setSpeed(missileSpeed/10, -upRadians);
     cranberry.setDead(false);
   }
-  
+
   spriteCranberries.add(cranberry);
-  
+
   return cranberry;
 }
 
@@ -350,10 +354,10 @@ void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
   soundPlayer.playPop();
   monster.setDead(true);
   buildCranberry(monster);
-
 }
 
 void drawScore() {
+  fill(255);
   textSize(32);
   String msg = " Score: " + score;
   text(msg, 10, 30);
@@ -365,9 +369,62 @@ void drawGameOver()
   gameOverSprite.setDead(false);
 }
 
+
+void setGradient(int x, int y, float w, float h, color c1, color c2) {
+
+  noFill();
+
+  for (int i = y; i <= y+h; i++) {
+    float inter = map(i, y, y+h, 0, 1);
+    color c = lerpColor(c1, c2, inter);
+    stroke(c);
+    line(x, i, x+w, i);
+  }
+}
+
+static final int NUM_FLAKES = 300;
+static final int MAX_FLAKE_SIZE = 5;
+int[] snowXPos = new int[NUM_FLAKES];
+int[] snowYPos = new int[NUM_FLAKES];
+int[] snowDir = new int[NUM_FLAKES];
+int[] snowSize = new int[NUM_FLAKES];
+
+
+void initSnowflakes() {
+  for (int i=0; i<NUM_FLAKES; i++) {
+    snowXPos[i] = (int)random(width);
+    snowYPos[i] = (int)random(height);
+    snowDir[i] = (int)random(3) - 1;
+    snowSize[i] = (int)random(MAX_FLAKE_SIZE) + 1;
+  }
+}
+
+void drawBackground() {
+  color c1 = color(24, 184, 199);
+  color c2 = color(126, 242, 252);
+  setGradient(0, 0, width, height, c1, c2);
+
+  noStroke();
+  fill(255, 255, 255, 200);
+  for (int i=0; i<NUM_FLAKES; i++) {
+
+
+    if (snowXPos[i] < 0 || snowXPos[i] > width || snowYPos[i] > height) {
+      snowXPos[i] = (int)random(width);
+      snowYPos[i] = 0;
+      snowDir[i] = (int)random(3) - 1;
+      snowSize[i] = (int)random(MAX_FLAKE_SIZE) + 1;
+    }
+
+    ellipse(snowXPos[i], snowYPos[i], snowSize[i], snowSize[i]);
+    snowXPos[i] += snowDir[i];
+    snowYPos[i] += 2;
+  }
+}
+
 public void draw() 
 {
-  background(0);
+  drawBackground();
   drawScore();
 
   S4P.drawSprites();
