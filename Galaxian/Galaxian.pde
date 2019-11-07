@@ -10,7 +10,7 @@ import java.util.ArrayDeque;
 int monsterCols = 10;
 int monsterRows = 5; 
 
-long mmCounter = 0;
+long mmCounter = 50;
 int mmStep = 1;
 
 static final String MISSILE_IMAGE = "cranberry.png";
@@ -21,6 +21,8 @@ static final String SPRITE_CRANBERRY_IMAGE = "spriteCranberry.png";
 static final float SPRITE_CRANBERRY_SCALE = 0.3f;
 static final String LEBRON_JAMES_IMAGE = "lebron.png";
 static final float LEBRON_JAMES_SCALE = 0.18f;
+static final float GRAVITY = 600f;
+static final float FLOATING_MONSTER_SPEED = 100f;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
@@ -41,6 +43,7 @@ void setup()
   registerMethod("pre", this);
 
   size(700, 500);
+  frame.setTitle("Wanna Sprite Cranberry?");
   S4P.messagesEnabled(true);
   buildSprites();
   resetMonsters();
@@ -99,15 +102,16 @@ void buildMonsterGrid()
 // Arrange Monsters into a grid
 void resetMonsters() 
 {
+  mmCounter = 50;
   for (int idx = 0; idx < monsters.length; idx++ ) {
     Sprite monster = monsters[idx];
     monster.setSpeed(0, 0);
 
     double mwidth = monster.getWidth() + 20;
     double totalWidth = mwidth * monsterCols;
-    double start = (width - totalWidth)/2 - 25;
+    double start = (width - totalWidth)/2;
     double mheight = monster.getHeight();
-    int xpos = (int)((((idx % monsterCols)*mwidth)+start));
+    int xpos = (int)((((idx % monsterCols)*mwidth)+start)) + 22;
     int ypos = (int)(((int)(idx / monsterCols)*mheight)+50);
     monster.setXY(xpos, ypos);
 
@@ -270,7 +274,7 @@ void moveMonsters()
   for (int idx = 0; idx < monsters.length; idx++ ) {
     Sprite monster = monsters[idx];
     if (!monster.isDead()&& monster != fallingMonster) {
-      monster.setXY(monster.getX()+mmStep, monster.getY());
+      monster.setVelX(FLOATING_MONSTER_SPEED*mmStep);
     }
   }
 
@@ -325,7 +329,7 @@ void processCollisions()
   if (fallingMonster!= null && !ship.isDead() 
     && fallingMonster.bb_collision(ship)) {
     explodeShip();
-    monsterHit(fallingMonster);
+    monsterHitShip(fallingMonster);
     fallingMonster = null;
     gameOver = true;
     soundPlayer.stopSong();
@@ -338,11 +342,11 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
   cranberry.setScale(SPRITE_CRANBERRY_SCALE);
   cranberry.setXY(monster.getX(), monster.getY());
 
-  if (!cranberry.isDead() && !ship.isDead()) {
-    cranberry.setPos(monster.getPos()) ;      
-    cranberry.setSpeed(missileSpeed/10, -upRadians);
-    cranberry.setDead(false);
-  }
+  cranberry.setPos(monster.getPos());
+  cranberry.setDomain(0, 0, width, height+100, Sprite.REBOUND);
+  cranberry.setVelXY(monster.getVelX(), monster.getVelY());
+  cranberry.setAccXY(0, GRAVITY);
+  cranberry.setDead(false);
 
   spriteCranberries.add(cranberry);
 
@@ -354,6 +358,10 @@ void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
   soundPlayer.playPop();
   monster.setDead(true);
   buildCranberry(monster);
+}
+
+void monsterHitShip(Sprite monster) {
+  monster.setDead(true);
 }
 
 void drawScore() {
