@@ -10,9 +10,6 @@ import java.util.ArrayDeque;
 int monsterCols = 10;
 int monsterRows = 5; 
 
-long mmCounter = 50;
-int mmStep = 1;
-
 static final String MISSILE_IMAGE = "cranberry.png";
 static final float MISSILE_SCALE = 0.05f;
 static final String MONSTER_IMAGE = "sprite.png";
@@ -32,6 +29,7 @@ Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
 ArrayList<Sprite> spriteCranberries;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
+Sprite monsterBlock;
 
 KeyboardController kbController;
 SoundPlayer soundPlayer;
@@ -65,7 +63,7 @@ void settings()
   initSnowflakes();
 }
 
-void setup(){
+void setup() {
   frame.setTitle("Wanna Sprite Cranberry?");
   frameRate(50);
 }
@@ -83,6 +81,10 @@ void buildSprites()
 
   // The Grid Monsters 
   buildMonsterGrid();
+
+  monsterBlock = new Sprite(this, MONSTER_IMAGE, 0);
+  monsterBlock.setScale(MONSTER_SCALE);
+  monsterBlock.setVisible(false);
 }
 
 Sprite buildShip()
@@ -107,24 +109,27 @@ void buildMonsterGrid()
   }
 }
 
+double totalWidth = 0;
+
 // Arrange Monsters into a grid
 void resetMonsters() 
 {
-  mmCounter = 50;
+  double mwidth = monsters[0].getWidth() + 20;
+  double mheight = monsters[0].getHeight();
+  totalWidth = mwidth * monsterCols;
+  double start = (UNSCALED_WIDTH - totalWidth)/2; 
   for (int idx = 0; idx < monsters.length; idx++ ) {
     Sprite monster = monsters[idx];
-    monster.setSpeed(0, 0);
-
-    double mwidth = monster.getWidth() + 20;
-    double totalWidth = mwidth * monsterCols;
-    double start = (UNSCALED_WIDTH - totalWidth)/2;
-    double mheight = monster.getHeight();
+    monster.setVelXY(FLOATING_MONSTER_SPEED, 0);
     int xpos = (int)((((idx % monsterCols)*mwidth)+start)) + 22;
     int ypos = (int)(((int)(idx / monsterCols)*mheight)+50);
     monster.setXY(xpos, ypos);
 
+
     monster.setDead(false);
   }
+  monsterBlock.setVelXY(FLOATING_MONSTER_SPEED, 0);
+  monsterBlock.setXY(start + 22, 0);
 }
 
 // Build individual monster
@@ -209,12 +214,12 @@ void explodeShip()
 }
 
 
-boolean isOnScreen(Sprite sprite){
+boolean isOnScreen(Sprite sprite) {
   double lx = sprite.getX() - sprite.getWidth()/2;
   double rx = sprite.getX() + sprite.getWidth()/2;
   double uy = sprite.getY() - sprite.getHeight()/2;
   double ly = sprite.getY() + sprite.getHeight()/2;
-  
+
   return lx <= UNSCALED_WIDTH && rx >= 0 && uy <= UNSCALED_HEIGHT && ly >= 0;
 }
 
@@ -285,16 +290,23 @@ double fmSpeed = 150;
 void moveMonsters() 
 {  
   // Move Grid Monsters
-  mmCounter++;
-  if ((mmCounter % 100) == 0) mmStep *= -1;
-
-  for (int idx = 0; idx < monsters.length; idx++ ) {
-    Sprite monster = monsters[idx];
-    if (!monster.isDead()&& monster != fallingMonster) {
-      monster.setVelX(FLOATING_MONSTER_SPEED*mmStep);
+  if (monsterBlock.getX() - monsterBlock.getWidth()/2 - 10 < 25) {
+    for (int idx = 0; idx < monsters.length; idx++ ) {
+      Sprite monster = monsters[idx];
+      if (!monster.isDead()&& monster != fallingMonster) {
+        monster.setVelX(FLOATING_MONSTER_SPEED);
+        monsterBlock.setVelX(FLOATING_MONSTER_SPEED);
+      }
+    }
+  } else if (monsterBlock.getX() - monsterBlock.getWidth()/2 + totalWidth - 10 > UNSCALED_WIDTH - 25) {
+    for (int idx = 0; idx < monsters.length; idx++ ) {
+      Sprite monster = monsters[idx];
+      if (!monster.isDead()&& monster != fallingMonster) {
+        monster.setVelX(-FLOATING_MONSTER_SPEED);
+        monsterBlock.setVelX(-FLOATING_MONSTER_SPEED);
+      }
     }
   }
-
   // Move Falling Monster
   if (fallingMonster != null) {
     if (int(random(difficulty)) == 1) {
@@ -309,7 +321,6 @@ void moveMonsters()
     }
   }
 }
-
 // Detect collisions between sprites
 void processCollisions() 
 {
@@ -407,8 +418,8 @@ void setGradient(int x, int y, float w, float h, color c1, color c2) {
   }
 }
 
-static final int NUM_FLAKES = 300;
-static final int MAX_FLAKE_SIZE = 5;
+static final int NUM_FLAKES = (int)(300*SCALE*SCALE);
+static final int MAX_FLAKE_SIZE = 5; 
 int[] snowXPos = new int[NUM_FLAKES];
 int[] snowYPos = new int[NUM_FLAKES];
 int[] snowDir = new int[NUM_FLAKES];
@@ -450,7 +461,7 @@ void drawBackground() {
 public void draw() 
 {
   drawBackground();
-  
+
   pushMatrix();
   scale(SCALE);
   drawScore();
