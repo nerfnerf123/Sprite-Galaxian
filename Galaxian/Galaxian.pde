@@ -24,6 +24,10 @@ static final float LEBRON_JAMES_SCALE = 0.18f;
 static final float GRAVITY = 600f;
 static final float FLOATING_MONSTER_SPEED = 100f;
 
+static final float SCALE = 1.4f;
+static final int UNSCALED_WIDTH = 700;
+static final int UNSCALED_HEIGHT = 500;
+
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
 ArrayList<Sprite> spriteCranberries;
@@ -33,7 +37,7 @@ KeyboardController kbController;
 SoundPlayer soundPlayer;
 StopWatch stopWatch = new StopWatch();
 
-void setup() 
+void settings() 
 {
   kbController = new KeyboardController(this);
   soundPlayer = new SoundPlayer(this);  
@@ -42,8 +46,7 @@ void setup()
   // by Processing before the draw() function. 
   registerMethod("pre", this);
 
-  size(700, 500);
-  frame.setTitle("Wanna Sprite Cranberry?");
+  size((int)(UNSCALED_WIDTH*SCALE), (int)(UNSCALED_HEIGHT*SCALE));
   S4P.messagesEnabled(true);
   buildSprites();
   resetMonsters();
@@ -60,6 +63,11 @@ void setup()
   soundPlayer.playSong();
 
   initSnowflakes();
+}
+
+void setup(){
+  frame.setTitle("Wanna Sprite Cranberry?");
+  frameRate(50);
 }
 
 boolean gameOver = false;
@@ -80,11 +88,11 @@ void buildSprites()
 Sprite buildShip()
 {
   Sprite ship = new Sprite(this, LEBRON_JAMES_IMAGE, 50);
-  ship.setXY(width/2, height - 30);
+  ship.setXY(UNSCALED_WIDTH/2, UNSCALED_HEIGHT - 30);
   ship.setVelXY(0.0f, 0);
   ship.setScale(LEBRON_JAMES_SCALE);
   // Domain keeps the moving sprite withing specific screen area 
-  ship.setDomain(0, height-ship.getHeight(), width, height, Sprite.HALT);
+  ship.setDomain(0, UNSCALED_HEIGHT-ship.getHeight(), UNSCALED_WIDTH, UNSCALED_HEIGHT, Sprite.HALT);
 
 
 
@@ -109,7 +117,7 @@ void resetMonsters()
 
     double mwidth = monster.getWidth() + 20;
     double totalWidth = mwidth * monsterCols;
-    double start = (width - totalWidth)/2;
+    double start = (UNSCALED_WIDTH - totalWidth)/2;
     double mheight = monster.getHeight();
     int xpos = (int)((((idx % monsterCols)*mwidth)+start)) + 22;
     int ypos = (int)(((int)(idx / monsterCols)*mheight)+50);
@@ -189,7 +197,7 @@ void replaceFallingMonster()
 
   fallingMonster.setSpeed(fmSpeed, fmRightAngle);
   // Domain keeps the moving sprite within specific screen area 
-  fallingMonster.setDomain(0, 0, width, height+100, Sprite.REBOUND);
+  fallingMonster.setDomain(0, 0, UNSCALED_WIDTH, UNSCALED_HEIGHT+100, Sprite.REBOUND);
 }
 
 void explodeShip() 
@@ -201,6 +209,15 @@ void explodeShip()
 }
 
 
+boolean isOnScreen(Sprite sprite){
+  double lx = sprite.getX() - sprite.getWidth()/2;
+  double rx = sprite.getX() + sprite.getWidth()/2;
+  double uy = sprite.getY() - sprite.getHeight()/2;
+  double ly = sprite.getY() + sprite.getHeight()/2;
+  
+  return lx <= UNSCALED_WIDTH && rx >= 0 && uy <= UNSCALED_HEIGHT && ly >= 0;
+}
+
 // Executed before draw() is called 
 public void pre() 
 {    
@@ -210,13 +227,13 @@ public void pre()
 
   // If missile flies off screen
   for (int i=missiles.size()-1; i>=0; i--) {
-    if (!missiles.get(i).isOnScreem()) {
+    if (!isOnScreen(missiles.get(i))) {
       stopMissile(i);
     }
   }
 
   for (int i=spriteCranberries.size()-1; i>=0; i--) {
-    if (!spriteCranberries.get(i).isOnScreem()) {
+    if (!isOnScreen(spriteCranberries.get(i))) {
       S4P.deregisterSprite(spriteCranberries.get(i));
       spriteCranberries.remove(i);
     }
@@ -228,7 +245,7 @@ public void pre()
   }
 
   // if falling monster is off screen
-  if (fallingMonster == null || !fallingMonster.isOnScreem()) {
+  if (fallingMonster == null || !isOnScreen(fallingMonster)) {
     replaceFallingMonster();
   }
 
@@ -343,7 +360,7 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
   cranberry.setXY(monster.getX(), monster.getY());
 
   cranberry.setPos(monster.getPos());
-  cranberry.setDomain(0, 0, width, height+100, Sprite.REBOUND);
+  cranberry.setDomain(0, 0, UNSCALED_WIDTH, UNSCALED_HEIGHT+100, Sprite.REBOUND);
   cranberry.setVelXY(monster.getVelX(), monster.getVelY());
   cranberry.setAccXY(0, GRAVITY);
   cranberry.setDead(false);
@@ -373,7 +390,7 @@ void drawScore() {
 
 void drawGameOver() 
 {
-  gameOverSprite.setXY(width/2, height/2);
+  gameOverSprite.setXY(UNSCALED_WIDTH/2, UNSCALED_HEIGHT/2);
   gameOverSprite.setDead(false);
 }
 
@@ -433,10 +450,14 @@ void drawBackground() {
 public void draw() 
 {
   drawBackground();
+  
+  pushMatrix();
+  scale(SCALE);
   drawScore();
 
   S4P.drawSprites();
 
   if (gameOver)
     drawGameOver();
+  popMatrix();
 }
