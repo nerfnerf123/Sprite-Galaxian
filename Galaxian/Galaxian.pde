@@ -69,6 +69,7 @@ void setup() {
 
 boolean gameOver = false;
 int score = 0;
+int cranberriesTaken = 0;
 int fallingMonsterPts = 20;
 int gridMonsterPts = 10;
 
@@ -344,10 +345,11 @@ void processCollisions()
     Sprite cranberry = spriteCranberries.get(idx);
     if (cranberry != null && !ship.isDead() 
     && cranberry.bb_collision(ship)) {
-      explodeShip();
       cranberryHit(cranberry);
       cranberry = null;
-      gameOver = true;
+      spriteCranberries.remove(idx);
+      //explodeShip(); // Comment out if you don't want to die
+      //gameOver = true;
     }
   }
   
@@ -397,6 +399,7 @@ void cranberryHit(Sprite cranberry)
 {
   soundPlayer.playCranberry();
   cranberry.setDead(true);
+  cranberriesTaken += 1; // Adds to cranberryTaken counter
 }
 
 void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
@@ -415,6 +418,13 @@ void drawScore() {
   textSize(32);
   String msg = " Score: " + score;
   text(msg, 10, 30);
+}
+
+void drawCranberries() {
+  fill(255);
+  textSize(32);
+  String msg = " Cranberries: " + cranberriesTaken; // cranberriesTaken is a placeholder for whatever we decide to do with it
+  text(msg, 10, 60);
 }
 
 void drawGameOver() 
@@ -483,6 +493,7 @@ public void draw()
   pushMatrix();
   scale(SCALE);
   drawScore();
+  drawCranberries();
 
   S4P.drawSprites();
 
