@@ -5,26 +5,36 @@ import sprites.utils.*;
 import sprites.maths.*;
 import sprites.*;
 
-
 // The dimensions of the monster grid.
 int monsterCols = 10;
 int monsterRows = 5; 
 
-long mmCounter = 0;
-int mmStep = 1;
+static final String MISSILE_IMAGE = "cranberry.png";
+static final float MISSILE_SCALE = 0.05f;
+static final String MONSTER_IMAGE = "sprite.png";
+static final float MONSTER_SCALE = 0.3f;
+static final String SPRITE_CRANBERRY_IMAGE = "spriteCranberry.png";
+static final float SPRITE_CRANBERRY_SCALE = 0.3f;
+static final String LEBRON_JAMES_IMAGE = "lebron.png";
+static final float LEBRON_JAMES_SCALE = 0.18f;
+static final float GRAVITY = 600f;
+static final float FLOATING_MONSTER_SPEED = 100f;
 
-static final String MISSILE_IMAGE = "rocket.png";
+static final float SCALE = 1.4f;
+static final int UNSCALED_WIDTH = 700;
+static final int UNSCALED_HEIGHT = 500;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
+ArrayList<Sprite> spriteCranberries;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
-List<Sprite> cranberrys = new ArrayList<Sprite>();
+Sprite monsterBlock;
 
 KeyboardController kbController;
 SoundPlayer soundPlayer;
 StopWatch stopWatch = new StopWatch();
 
-void setup() 
+void settings() 
 {
   kbController = new KeyboardController(this);
   soundPlayer = new SoundPlayer(this);  
@@ -33,18 +43,28 @@ void setup()
   // by Processing before the draw() function. 
   registerMethod("pre", this);
 
-  size(700, 500);
+  size((int)(UNSCALED_WIDTH*SCALE), (int)(UNSCALED_HEIGHT*SCALE));
   S4P.messagesEnabled(true);
   buildSprites();
   resetMonsters();
 
   missiles = new ArrayList<Sprite>();
+  spriteCranberries = new ArrayList<Sprite>();
 
   explosion = new Sprite(this, "explosion_strip16.png", 17, 1, 90);
   explosion.setScale(1);
 
   gameOverSprite = new Sprite(this, "gameOver.png", 100);
   gameOverSprite.setDead(true);
+
+  soundPlayer.playSong();
+
+  initSnowflakes();
+}
+
+void setup() {
+  frame.setTitle("Wanna Sprite Cranberry?");
+  frameRate(50);
 }
 
 boolean gameOver = false;
@@ -60,17 +80,20 @@ void buildSprites()
 
   // The Grid Monsters 
   buildMonsterGrid();
+
+  monsterBlock = new Sprite(this, MONSTER_IMAGE, 0);
+  monsterBlock.setScale(MONSTER_SCALE);
+  monsterBlock.setVisible(false);
 }
 
 Sprite buildShip()
 {
-  Sprite ship = new Sprite(this, "ship.png", 50);
-  ship.setXY(width/2, height - 30);
+  Sprite ship = new Sprite(this, LEBRON_JAMES_IMAGE, 50);
+  ship.setXY(UNSCALED_WIDTH/2, UNSCALED_HEIGHT - 30);
   ship.setVelXY(0.0f, 0);
-  ship.setScale(.75);
-  ship.setRot(3.14159);
+  ship.setScale(LEBRON_JAMES_SCALE);
   // Domain keeps the moving sprite withing specific screen area 
-  ship.setDomain(0, height-ship.getHeight(), width, height, Sprite.HALT);
+  ship.setDomain(0, UNSCALED_HEIGHT-ship.getHeight(), UNSCALED_WIDTH, UNSCALED_HEIGHT, Sprite.HALT);
 
 
 
@@ -85,30 +108,34 @@ void buildMonsterGrid()
   }
 }
 
+double totalWidth = 0;
+
 // Arrange Monsters into a grid
 void resetMonsters() 
 {
+  double mwidth = monsters[0].getWidth() + 20;
+  double mheight = monsters[0].getHeight();
+  totalWidth = mwidth * monsterCols;
+  double start = (UNSCALED_WIDTH - totalWidth)/2; 
   for (int idx = 0; idx < monsters.length; idx++ ) {
     Sprite monster = monsters[idx];
-    monster.setSpeed(0, 0);
-
-    double mwidth = monster.getWidth() + 20;
-    double totalWidth = mwidth * monsterCols;
-    double start = (width - totalWidth)/2 - 25;
-    double mheight = monster.getHeight();
-    int xpos = (int)((((idx % monsterCols)*mwidth)+start));
+    monster.setVelXY(FLOATING_MONSTER_SPEED, 0);
+    int xpos = (int)((((idx % monsterCols)*mwidth)+start)) + 22;
     int ypos = (int)(((int)(idx / monsterCols)*mheight)+50);
     monster.setXY(xpos, ypos);
 
+
     monster.setDead(false);
   }
+  monsterBlock.setVelXY(FLOATING_MONSTER_SPEED, 0);
+  monsterBlock.setXY(start + 22, 0);
 }
 
 // Build individual monster
 Sprite buildMonster() 
 {
-  Sprite monster = new Sprite(this, "monster.png", 30);
-  monster.setScale(.5);
+  Sprite monster = new Sprite(this, MONSTER_IMAGE, 30);
+  monster.setScale(MONSTER_SCALE);
   monster.setDead(false);
 
   return monster;
@@ -118,7 +145,7 @@ Sprite buildMissile()
 {
   // The Missile
   Sprite sprite  = new Sprite(this, MISSILE_IMAGE, 10);
-  sprite.setScale(.5);
+  sprite.setScale(MISSILE_SCALE);
   sprite.setDead(true); // Initially hide the missile
   return sprite;
 }
@@ -130,7 +157,8 @@ void fireMissile()
 {
   if (!ship.isDead()) {
     Sprite missile = buildMissile();
-    missile.setPos(ship.getPos());
+    Vector2D shipPos = ship.getPos();
+    missile.setPos(new Vector2D(shipPos.x + ship.getWidth()*0.32f, shipPos.y - ship.getHeight()*.5f));
     missile.setSpeed(missileSpeed, upRadians);
     missile.setDead(false);
     missiles.add(missile);
@@ -173,7 +201,7 @@ void replaceFallingMonster()
 
   fallingMonster.setSpeed(fmSpeed, fmRightAngle);
   // Domain keeps the moving sprite within specific screen area 
-  fallingMonster.setDomain(0, 0, width, height+100, Sprite.REBOUND);
+  fallingMonster.setDomain(0, 0, UNSCALED_WIDTH, UNSCALED_HEIGHT+100, Sprite.REBOUND);
 }
 
 void explodeShip() 
@@ -185,6 +213,15 @@ void explodeShip()
 }
 
 
+boolean isOnScreen(Sprite sprite) {
+  double lx = sprite.getX() - sprite.getWidth()/2;
+  double rx = sprite.getX() + sprite.getWidth()/2;
+  double uy = sprite.getY() - sprite.getHeight()/2;
+  double ly = sprite.getY() + sprite.getHeight()/2;
+
+  return lx <= UNSCALED_WIDTH && rx >= 0 && uy <= UNSCALED_HEIGHT && ly >= 0;
+}
+
 // Executed before draw() is called 
 public void pre() 
 {    
@@ -194,8 +231,15 @@ public void pre()
 
   // If missile flies off screen
   for (int i=missiles.size()-1; i>=0; i--) {
-    if (!missiles.get(i).isOnScreem()) {
+    if (!isOnScreen(missiles.get(i))) {
       stopMissile(i);
+    }
+  }
+
+  for (int i=spriteCranberries.size()-1; i>=0; i--) {
+    if (!isOnScreen(spriteCranberries.get(i))) {
+      S4P.deregisterSprite(spriteCranberries.get(i));
+      spriteCranberries.remove(i);
     }
   }
 
@@ -205,7 +249,7 @@ public void pre()
   }
 
   // if falling monster is off screen
-  if (fallingMonster == null || !fallingMonster.isOnScreem()) {
+  if (fallingMonster == null || !isOnScreen(fallingMonster)) {
     replaceFallingMonster();
   }
 
@@ -225,10 +269,10 @@ void checkKeys()
     if (kbController.isRight()) {
       ship.setX(ship.getX()+10);
     }
-    if (kbController.isSpace() && !spaceWasPressed){
+    if (kbController.isSpace() && !spaceWasPressed) {
       spaceWasPressed = true;
       fireMissile();
-    } else if (!kbController.isSpace()){
+    } else if (!kbController.isSpace()) {
       spaceWasPressed = false;
     }
   }
@@ -245,16 +289,23 @@ double fmSpeed = 150;
 void moveMonsters() 
 {  
   // Move Grid Monsters
-  mmCounter++;
-  if ((mmCounter % 100) == 0) mmStep *= -1;
-
-  for (int idx = 0; idx < monsters.length; idx++ ) {
-    Sprite monster = monsters[idx];
-    if (!monster.isDead()&& monster != fallingMonster) {
-      monster.setXY(monster.getX()+mmStep, monster.getY());
+  if (monsterBlock.getX() - monsterBlock.getWidth()/2 - 10 < 25) {
+    for (int idx = 0; idx < monsters.length; idx++ ) {
+      Sprite monster = monsters[idx];
+      if (!monster.isDead()&& monster != fallingMonster) {
+        monster.setVelX(FLOATING_MONSTER_SPEED);
+        monsterBlock.setVelX(FLOATING_MONSTER_SPEED);
+      }
+    }
+  } else if (monsterBlock.getX() - monsterBlock.getWidth()/2 + totalWidth - 10 > UNSCALED_WIDTH - 25) {
+    for (int idx = 0; idx < monsters.length; idx++ ) {
+      Sprite monster = monsters[idx];
+      if (!monster.isDead()&& monster != fallingMonster) {
+        monster.setVelX(-FLOATING_MONSTER_SPEED);
+        monsterBlock.setVelX(-FLOATING_MONSTER_SPEED);
+      }
     }
   }
-
   // Move Falling Monster
   if (fallingMonster != null) {
     if (int(random(difficulty)) == 1) {
@@ -269,7 +320,6 @@ void moveMonsters()
     }
   }
 }
-
 // Detect collisions between sprites
 void processCollisions() 
 {
@@ -290,8 +340,8 @@ void processCollisions()
   }
   
   // Detect collisions between cranberrys and ship
-  for (int idx = 0; idx < cranberrys.size(); idx++) {
-    Sprite cranberry = cranberrys.get(idx);
+  for (int idx = 0; idx < spriteCranberries.size(); idx++) {
+    Sprite cranberry = spriteCranberries.get(idx);
     if (cranberry != null && !ship.isDead() 
     && cranberry.bb_collision(ship)) {
       explodeShip();
@@ -319,26 +369,27 @@ void processCollisions()
   if (fallingMonster!= null && !ship.isDead() 
     && fallingMonster.bb_collision(ship)) {
     explodeShip();
-    monsterHit(fallingMonster);
+    monsterHitShip(fallingMonster);
     fallingMonster = null;
     gameOver = true;
+    soundPlayer.stopSong();
   }
 }
 
 Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
 {
-  Sprite cranberry = new Sprite(this, "ship.png", 30);
-  cranberrys.add(cranberry);
-  cranberry.setScale(.5);
+  Sprite cranberry = new Sprite(this, SPRITE_CRANBERRY_IMAGE, 30);
+  cranberry.setScale(SPRITE_CRANBERRY_SCALE);
   cranberry.setXY(monster.getX(), monster.getY());
-  
-  if (!cranberry.isDead() && !ship.isDead()) {
-    cranberry.setPos(monster.getPos());
-    cranberry.setSpeed(missileSpeed/10, -upRadians);
-    cranberry.setDead(false);
-  }
-  
-  
+
+  cranberry.setPos(monster.getPos());
+  cranberry.setDomain(0, 0, UNSCALED_WIDTH, UNSCALED_HEIGHT+100, Sprite.REBOUND);
+  cranberry.setVelXY(monster.getVelX(), monster.getVelY());
+  cranberry.setAccXY(0, GRAVITY);
+  cranberry.setDead(false);
+
+  spriteCranberries.add(cranberry);
+
   return cranberry;
 }
 
@@ -353,10 +404,14 @@ void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
   soundPlayer.playPop();
   monster.setDead(true);
   buildCranberry(monster);
+}
 
+void monsterHitShip(Sprite monster) {
+  monster.setDead(true);
 }
 
 void drawScore() {
+  fill(255);
   textSize(32);
   String msg = " Score: " + score;
   text(msg, 10, 30);
@@ -364,17 +419,74 @@ void drawScore() {
 
 void drawGameOver() 
 {
-  gameOverSprite.setXY(width/2, height/2);
+  gameOverSprite.setXY(UNSCALED_WIDTH/2, UNSCALED_HEIGHT/2);
   gameOverSprite.setDead(false);
+}
+
+
+void setGradient(int x, int y, float w, float h, color c1, color c2) {
+
+  noFill();
+
+  for (int i = y; i <= y+h; i++) {
+    float inter = map(i, y, y+h, 0, 1);
+    color c = lerpColor(c1, c2, inter);
+    stroke(c);
+    line(x, i, x+w, i);
+  }
+}
+
+static final int NUM_FLAKES = (int)(300*SCALE*SCALE);
+static final int MAX_FLAKE_SIZE = 5; 
+int[] snowXPos = new int[NUM_FLAKES];
+int[] snowYPos = new int[NUM_FLAKES];
+int[] snowDir = new int[NUM_FLAKES];
+int[] snowSize = new int[NUM_FLAKES];
+
+
+void initSnowflakes() {
+  for (int i=0; i<NUM_FLAKES; i++) {
+    snowXPos[i] = (int)random(width);
+    snowYPos[i] = (int)random(height);
+    snowDir[i] = (int)random(3) - 1;
+    snowSize[i] = (int)random(MAX_FLAKE_SIZE) + 1;
+  }
+}
+
+void drawBackground() {
+  color c1 = color(24, 184, 199);
+  color c2 = color(126, 242, 252);
+  setGradient(0, 0, width, height, c1, c2);
+
+  noStroke();
+  fill(255, 255, 255, 200);
+  for (int i=0; i<NUM_FLAKES; i++) {
+
+
+    if (snowXPos[i] < 0 || snowXPos[i] > width || snowYPos[i] > height) {
+      snowXPos[i] = (int)random(width);
+      snowYPos[i] = 0;
+      snowDir[i] = (int)random(3) - 1;
+      snowSize[i] = (int)random(MAX_FLAKE_SIZE) + 1;
+    }
+
+    ellipse(snowXPos[i], snowYPos[i], snowSize[i], snowSize[i]);
+    snowXPos[i] += snowDir[i];
+    snowYPos[i] += 2;
+  }
 }
 
 public void draw() 
 {
-  background(0);
+  drawBackground();
+
+  pushMatrix();
+  scale(SCALE);
   drawScore();
 
   S4P.drawSprites();
 
   if (gameOver)
     drawGameOver();
+  popMatrix();
 }
