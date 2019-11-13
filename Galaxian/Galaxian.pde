@@ -1,8 +1,10 @@
 /*
 */
+import java.util.*;
 import sprites.utils.*;
 import sprites.maths.*;
 import sprites.*;
+
 
 // The dimensions of the monster grid.
 int monsterCols = 10;
@@ -16,6 +18,7 @@ static final String MISSILE_IMAGE = "rocket.png";
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
+List<Sprite> cranberrys = new ArrayList<Sprite>();
 
 KeyboardController kbController;
 SoundPlayer soundPlayer;
@@ -285,7 +288,20 @@ void processCollisions()
       }
     }
   }
-
+  
+  // Detect collisions between cranberrys and ship
+  for (int idx = 0; idx < cranberrys.size(); idx++) {
+    Sprite cranberry = cranberrys.get(idx);
+    if (cranberry != null && !ship.isDead() 
+    && cranberry.bb_collision(ship)) {
+      explodeShip();
+      cranberryHit(cranberry);
+      cranberry = null;
+      gameOver = true;
+    }
+  }
+  
+  
   if (fallingMonster != null)
     for (int j = missiles.size()-1; j>=0; j--) {
       Sprite missile = missiles.get(j);
@@ -312,6 +328,7 @@ void processCollisions()
 Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
 {
   Sprite cranberry = new Sprite(this, "ship.png", 30);
+  cranberrys.add(cranberry);
   cranberry.setScale(.5);
   cranberry.setXY(monster.getX(), monster.getY());
   
@@ -323,6 +340,12 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
   
   
   return cranberry;
+}
+
+void cranberryHit(Sprite cranberry)
+{
+  soundPlayer.playCranberry();
+  cranberry.setDead(true);
 }
 
 void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
