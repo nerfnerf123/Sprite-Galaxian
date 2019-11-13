@@ -17,6 +17,8 @@ static final String SPRITE_CRANBERRY_IMAGE = "spriteCranberry.png";
 static final float SPRITE_CRANBERRY_SCALE = 0.3f;
 static final String LEBRON_JAMES_IMAGE = "lebron.png";
 static final float LEBRON_JAMES_SCALE = 0.18f;
+static final String HEART_IMAGE = "heart.png";
+static final float HEART_SCALE = 0.25f;
 static final float GRAVITY = 600f;
 static final float FLOATING_MONSTER_SPEED = 100f;
 
@@ -24,11 +26,13 @@ static final float SCALE = 1.5f;
 static final int UNSCALED_WIDTH = 700;
 static final int UNSCALED_HEIGHT = 500;
 
-static final int STARTING_LIVES = 10;
+static final int STARTING_LIVES = 3;
+static final int HEARTS_PER_ROW = 3;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
 ArrayList<Sprite> spriteCranberries;
+ArrayList<Sprite> hearts;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
 Sprite monsterBlock;
 
@@ -65,7 +69,9 @@ void settings()
 
   initSnowflakes();
 
+  hearts = new ArrayList<Sprite>();
   lives = STARTING_LIVES;
+  updateHearts();
 }
 
 void setup() {
@@ -141,6 +147,28 @@ void resetMonsters()
   }
   monsterBlock.setVelXY(FLOATING_MONSTER_SPEED, 0);
   monsterBlock.setXY(start + 22, 0);
+}
+
+void updateHearts() {
+  if (hearts.size() >= lives) {
+    for (int i=hearts.size()-1; i>lives-1; i--) {
+      S4P.deregisterSprite(hearts.get(i));
+      hearts.remove(i);
+    }
+  }
+
+  for (int i=hearts.size(); i<lives; i++) {
+    int r=i/HEARTS_PER_ROW, c=i%HEARTS_PER_ROW;
+    Sprite heart = new Sprite(this, HEART_IMAGE, 100);
+    heart.setScale(HEART_SCALE);
+
+    double x = UNSCALED_WIDTH - 20 - (HEARTS_PER_ROW - c) * (heart.getWidth()*1.2f);
+    double y = 20 + r * heart.getHeight();
+
+
+    heart.setXY(x, y);
+    hearts.add(heart);
+  }
 }
 
 // Build individual monster
@@ -335,12 +363,21 @@ void moveMonsters()
 
 void loseLife() {
   lives--;
-  if (lives == 0){
+  if (lives == 0) {
     gameOver = true;
-  }else {
-    resetLebron(ship);
     soundPlayer.stopSong();
+  } else {
+    resetLebron(ship);
   }
+  updateHearts();
+}
+
+int addLifeDisplayCounter = -1;
+
+void addLife() {
+  lives++;
+  addLifeDisplayCounter = 50;
+  updateHearts();
 }
 
 // Detect collisions between sprites
@@ -366,7 +403,7 @@ void processCollisions()
   for (int idx = 0; idx < spriteCranberries.size(); idx++) {
     Sprite cranberry = spriteCranberries.get(idx);
     if (cranberry != null && !ship.isDead() 
-    && cranberry.bb_collision(ship)) {
+      && cranberry.bb_collision(ship)) {
       cranberryHit(cranberry);
       cranberry = null;
       spriteCranberries.remove(idx);
@@ -421,6 +458,9 @@ void cranberryHit(Sprite cranberry)
   soundPlayer.playCranberry();
   cranberry.setDead(true);
   cranberriesTaken += 1; // Adds to cranberryTaken counter
+  if (cranberriesTaken % 10 == 0) {
+    addLife();
+  }
 }
 
 void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
@@ -454,6 +494,17 @@ void drawGameOver()
   gameOverSprite.setDead(false);
 }
 
+void drawAddLife() {
+  textAlign(CENTER, CENTER);
+  float progress = (50f - addLifeDisplayCounter) / 50f;
+  
+  textSize(30);
+  float y = UNSCALED_HEIGHT/2 - progress * UNSCALED_HEIGHT * 0.2f;
+  fill(255, 0, 0, (1.0f-progress)*255.0f);
+  text("1-Up", UNSCALED_WIDTH/2, y);
+  addLifeDisplayCounter--;
+  textAlign(TOP, LEFT);
+}
 
 void setGradient(int x, int y, float w, float h, color c1, color c2) {
 
@@ -520,5 +571,8 @@ public void draw()
 
   if (gameOver)
     drawGameOver();
+
+  if (addLifeDisplayCounter > -1)
+    drawAddLife();
   popMatrix();
 }
