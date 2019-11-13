@@ -20,9 +20,11 @@ static final float LEBRON_JAMES_SCALE = 0.18f;
 static final float GRAVITY = 600f;
 static final float FLOATING_MONSTER_SPEED = 100f;
 
-static final float SCALE = 1.4f;
+static final float SCALE = 1.5f;
 static final int UNSCALED_WIDTH = 700;
 static final int UNSCALED_HEIGHT = 500;
+
+static final int STARTING_LIVES = 10;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
 ArrayList<Sprite> missiles;
@@ -33,6 +35,8 @@ Sprite monsterBlock;
 KeyboardController kbController;
 SoundPlayer soundPlayer;
 StopWatch stopWatch = new StopWatch();
+
+int lives;
 
 void settings() 
 {
@@ -60,6 +64,8 @@ void settings()
   soundPlayer.playSong();
 
   initSnowflakes();
+
+  lives = STARTING_LIVES;
 }
 
 void setup() {
@@ -89,15 +95,20 @@ void buildSprites()
 Sprite buildShip()
 {
   Sprite ship = new Sprite(this, LEBRON_JAMES_IMAGE, 50);
-  ship.setXY(UNSCALED_WIDTH/2, UNSCALED_HEIGHT - 30);
-  ship.setVelXY(0.0f, 0);
+
   ship.setScale(LEBRON_JAMES_SCALE);
   // Domain keeps the moving sprite withing specific screen area 
   ship.setDomain(0, UNSCALED_HEIGHT-ship.getHeight(), UNSCALED_WIDTH, UNSCALED_HEIGHT, Sprite.HALT);
 
-
+  resetLebron(ship);
 
   return ship;
+}
+
+void resetLebron(Sprite ship) {
+  ship.setXY(UNSCALED_WIDTH/2, UNSCALED_HEIGHT - 30);
+  ship.setVelXY(0.0f, 0);
+  ship.setDead(false);
 }
 
 // Populate the monsters grid 
@@ -320,6 +331,17 @@ void moveMonsters()
     }
   }
 }
+
+void loseLife() {
+  lives--;
+  if (lives == 0){
+    gameOver = true;
+  }else {
+    resetLebron(ship);
+    soundPlayer.stopSong();
+  }
+}
+
 // Detect collisions between sprites
 void processCollisions() 
 {
@@ -338,20 +360,19 @@ void processCollisions()
       }
     }
   }
-  
+
   // Detect collisions between cranberrys and ship
   for (int idx = 0; idx < spriteCranberries.size(); idx++) {
     Sprite cranberry = spriteCranberries.get(idx);
     if (cranberry != null && !ship.isDead() 
-    && cranberry.bb_collision(ship)) {
+      && cranberry.bb_collision(ship)) {
       explodeShip();
       cranberryHit(cranberry);
       cranberry = null;
-      gameOver = true;
     }
   }
-  
-  
+
+
   if (fallingMonster != null)
     for (int j = missiles.size()-1; j>=0; j--) {
       Sprite missile = missiles.get(j);
@@ -371,8 +392,7 @@ void processCollisions()
     explodeShip();
     monsterHitShip(fallingMonster);
     fallingMonster = null;
-    gameOver = true;
-    soundPlayer.stopSong();
+    loseLife();
   }
 }
 
