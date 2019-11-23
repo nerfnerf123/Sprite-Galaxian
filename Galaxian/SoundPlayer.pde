@@ -4,22 +4,19 @@ import ddf.minim.*; // Import Sound Library
 class SoundPlayer {
   Minim minimplay;
   AudioSample boomPlayer, popPlayer, cranberryPlayer;
-  
-  AudioSample[] spriteCranberrySFX;
+  AudioSample oneUpPlayer, firePlayer, clickPlayer;
   AudioPlayer songPlayer;
+  private boolean isPlaying = false;
 
 
   SoundPlayer(Object app) {
     minimplay = new Minim(app); 
     boomPlayer = minimplay.loadSample("explode.wav", 1024); 
     popPlayer = minimplay.loadSample("pop.wav", 1024);
-    cranberryPlayer = minimplay.loadSample("pop.wav", 1024);
-    
-    AudioSample queryPlayer = minimplay.loadSample("lebron noises/i have just one query.wav", 1024);
-    AudioSample wannaPlayer = minimplay.loadSample("lebron noises/wanna sprite cranberry.wav", 1024);
-    AudioSample clearPlayer = minimplay.loadSample("lebron noises/the answer is clear.wav", 1024);
-    AudioSample thirstyPlayer = minimplay.loadSample("lebron noises/thirsty.wav", 1024);
-    spriteCranberrySFX = new AudioSample[] {queryPlayer, wannaPlayer, clearPlayer, thirstyPlayer};
+    cranberryPlayer = minimplay.loadSample("drincc.wav", 1024);
+    oneUpPlayer = minimplay.loadSample("1up.wav", 1024);
+    firePlayer = minimplay.loadSample("fire.wav", 1024);
+    clickPlayer = minimplay.loadSample("clicc.wav", 1024);
     
     songPlayer = minimplay.loadFile("song.mp3");
   }
@@ -29,31 +26,43 @@ class SoundPlayer {
   }
 
   void playPop() {
-    popPlayer.trigger();
+    //popPlayer.trigger();
   }
   
   void playCranberry() {
     cranberryPlayer.trigger();
   }
   
+  void play1Up(){
+    oneUpPlayer.trigger();
+  }
+  
+  void playFire(){
+    firePlayer.trigger();
+  }
+  
   void playSong(){
     songPlayer.loop();
+    isPlaying = true;
   }
   
   void stopSong(){
     songPlayer.pause();
+    isPlaying = false;
+  }
+
+  void playClick(){
+    clickPlayer.trigger();
+  }
+  
+  void toggleSong(){
+    playClick();
+    if(isPlaying){
+      stopSong();
+    }else{
+      playSong();
+    }
   }
   
   
-  void playRandomSFX(){
-    int choice = (int)(random(spriteCranberrySFX.length));
-    spriteCranberrySFX[choice].trigger();
-  }
-  
-  int index = 0;
-  void playOrderedSFX(){
-    spriteCranberrySFX[index].trigger();
-    
-    index = (index+1) % spriteCranberrySFX.length;
-  }
 }

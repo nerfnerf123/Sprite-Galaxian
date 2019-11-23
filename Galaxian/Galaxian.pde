@@ -19,6 +19,10 @@ static final String LEBRON_JAMES_IMAGE = "lebron.png";
 static final float LEBRON_JAMES_SCALE = 0.18f;
 static final String HEART_IMAGE = "heart.png";
 static final float HEART_SCALE = 0.25f;
+static final String DRINKING_SPRITE_IMAGE = "drincc.png";
+static final float DRINKING_SPRITE_SCALE = 0.75f;
+static final int DRINKING_SPRITE_FRAME_COUNT = 16;
+static final double DRINKING_SPRITE_INTERVAL = 1.0/20.0;
 static final float GRAVITY = 600f;
 static final float FLOATING_MONSTER_SPEED = 100f;
 
@@ -28,11 +32,15 @@ static final int UNSCALED_HEIGHT = 500;
 
 static final int STARTING_LIVES = 3;
 static final int HEARTS_PER_ROW = 3;
+static final int RESPAWN_FRAMES = 50;
 
 Sprite ship, fallingMonster, explosion, gameOverSprite;
+Sprite drinkingSprite;
 ArrayList<Sprite> missiles;
 ArrayList<Sprite> spriteCranberries;
 ArrayList<Sprite> hearts;
+PFont minecraftFont;
+PFont minecraftFontBig;
 Sprite monsters[] = new Sprite[monsterCols * monsterRows];
 Sprite monsterBlock;
 
@@ -41,6 +49,8 @@ SoundPlayer soundPlayer;
 StopWatch stopWatch = new StopWatch();
 
 int lives;
+
+boolean isPaused = false;
 
 void settings() 
 {
@@ -53,8 +63,11 @@ void settings()
 
   size((int)(UNSCALED_WIDTH*SCALE), (int)(UNSCALED_HEIGHT*SCALE));
   S4P.messagesEnabled(true);
+
+
   buildSprites();
   resetMonsters();
+
 
   missiles = new ArrayList<Sprite>();
   spriteCranberries = new ArrayList<Sprite>();
@@ -64,7 +77,6 @@ void settings()
 
   gameOverSprite = new Sprite(this, "gameOver.png", 100);
   gameOverSprite.setDead(true);
-
   soundPlayer.playSong();
 
   initSnowflakes();
@@ -75,6 +87,7 @@ void settings()
 }
 
 void setup() {
+  minecraftFont = createFont("Minecraftia.ttf", 30, false);
   frame.setTitle("Wanna Sprite Cranberry?");
   frameRate(50);
 }
@@ -93,6 +106,10 @@ void buildSprites()
 
   // The Grid Monsters 
   buildMonsterGrid();
+
+  drinkingSprite = new Sprite(this, DRINKING_SPRITE_IMAGE, DRINKING_SPRITE_FRAME_COUNT, 1, 50);
+  drinkingSprite.setScale(DRINKING_SPRITE_SCALE);
+  drinkingSprite.setVisible(false);
 
   monsterBlock = new Sprite(this, MONSTER_IMAGE, 0);
   monsterBlock.setScale(MONSTER_SCALE);
@@ -202,6 +219,7 @@ void fireMissile()
     missile.setSpeed(missileSpeed, upRadians);
     missile.setDead(false);
     missiles.add(missile);
+    soundPlayer.playFire();
   }
 }
 
@@ -293,15 +311,27 @@ public void pre()
     replaceFallingMonster();
   }
 
+  if (respawnCounter > -1) {
+    if (respawnCounter == 0) {
+      resetLebron(ship);
+    }
+    respawnCounter--;
+  }
 
 
-  S4P.updateSprites(stopWatch.getElapsedTime());
+
+  if (isPaused)
+    stopWatch.getElapsedTime();
+  else
+    S4P.updateSprites(stopWatch.getElapsedTime());
 } 
 
 boolean spaceWasPressed = false;
 
 void checkKeys() 
 {
+  if (isPaused)
+    return;
   if (focused) {
     if (kbController.isLeft()) {
       ship.setX(ship.getX()-10);
@@ -311,7 +341,8 @@ void checkKeys()
     }
     if (kbController.isSpace() && !spaceWasPressed) {
       spaceWasPressed = true;
-      fireMissile();
+      if (ship.isVisible())
+        fireMissile();
     } else if (!kbController.isSpace()) {
       spaceWasPressed = false;
     }
@@ -361,13 +392,15 @@ void moveMonsters()
   }
 }
 
+int respawnCounter = -1;
+
 void loseLife() {
   lives--;
   if (lives == 0) {
     gameOver = true;
     soundPlayer.stopSong();
   } else {
-    resetLebron(ship);
+    respawnCounter = RESPAWN_FRAMES;
   }
   updateHearts();
 }
@@ -378,6 +411,7 @@ void addLife() {
   lives++;
   addLifeDisplayCounter = 50;
   updateHearts();
+  soundPlayer.play1Up();
 }
 
 // Detect collisions between sprites
@@ -407,8 +441,11 @@ void processCollisions()
       cranberryHit(cranberry);
       cranberry = null;
       spriteCranberries.remove(idx);
-      //explodeShip(); // Comment out if you don't want to die
-      //gameOver = true;
+
+      //animate the sprite
+      drinkingSprite.setVisible(true);
+      drinkingSprite.setFrameSequence(0, DRINKING_SPRITE_FRAME_COUNT, DRINKING_SPRITE_INTERVAL, 1);
+      ship.setVisible(false);
     }
   }
 
@@ -455,12 +492,12 @@ Sprite buildCranberry(Sprite monster) // Changes sprite to Cranberry
 
 void cranberryHit(Sprite cranberry)
 {
-  soundPlayer.playCranberry();
   cranberry.setDead(true);
   cranberriesTaken += 1; // Adds to cranberryTaken counter
   if (cranberriesTaken % 10 == 0) {
     addLife();
-  }
+  } else
+    soundPlayer.playCranberry();
 }
 
 void monsterHit(Sprite monster) // Upon hit, change sprite to cranberry sprite
@@ -476,14 +513,14 @@ void monsterHitShip(Sprite monster) {
 
 void drawScore() {
   fill(255);
-  textSize(32);
+  textFont(minecraftFont);
   String msg = " Score: " + score;
   text(msg, 10, 30);
 }
 
 void drawCranberries() {
   fill(255);
-  textSize(32);
+  textFont(minecraftFont);
   String msg = " Cranberries: " + cranberriesTaken; // cranberriesTaken is a placeholder for whatever we decide to do with it
   text(msg, 10, 60);
 }
@@ -497,8 +534,8 @@ void drawGameOver()
 void drawAddLife() {
   textAlign(CENTER, CENTER);
   float progress = (50f - addLifeDisplayCounter) / 50f;
-  
-  textSize(30);
+
+  textFont(minecraftFont);
   float y = UNSCALED_HEIGHT/2 - progress * UNSCALED_HEIGHT * 0.2f;
   fill(255, 0, 0, (1.0f-progress)*255.0f);
   text("1-Up", UNSCALED_WIDTH/2, y);
@@ -558,15 +595,36 @@ void drawBackground() {
   }
 }
 
+boolean wasSongPlaying = false;
+void pause() {
+  soundPlayer.playClick()     ; 
+  if (!isPaused) {
+    wasSongPlaying = soundPlayer.songPlayer.isPlaying();
+    soundPlayer.stopSong();
+    isPaused = true;
+  } else {
+    if (wasSongPlaying)
+      soundPlayer.playSong();
+    isPaused = false;
+  }
+}
+
 public void draw() 
 {
+  if (isPaused)
+    return;
   drawBackground();
 
   pushMatrix();
   scale(SCALE);
-  drawScore();
-  drawCranberries();
 
+
+  if (drinkingSprite.isImageAnimating()) {
+    drinkingSprite.setPos(ship.getPos());
+  } else if (!ship.isVisible()) {
+    ship.setVisible(true);
+    drinkingSprite.setVisible(false);
+  }
   S4P.drawSprites();
 
   if (gameOver)
@@ -574,5 +632,15 @@ public void draw()
 
   if (addLifeDisplayCounter > -1)
     drawAddLife();
+  drawScore();
+  drawCranberries();
   popMatrix();
+}
+
+public void keyPressed() {
+  if (key == 'm' || key == 'M')
+    soundPlayer.toggleSong();
+  else if (key == 'p' || key == 'P') {
+    pause();
+  }
 }
